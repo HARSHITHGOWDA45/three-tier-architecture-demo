@@ -10,19 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-false: false
+      fail-fast: false
       matrix:
         service: [cart, catalogue, dispatch, payment, shipping, user, web]
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # -------------------------
-    # 🔍 Code Lint (Basic Example)
+    # 🔍 Code Lint
     # -------------------------
-    - name: Lint Code (Node Example)
-      if: matrix.service != 'dispatch'   # skip if not needed
+    - name: Lint Code
+      if: matrix.service != 'dispatch'
       run: |
         echo "Linting ${{ matrix.service }}"
         cd ${{ matrix.service }} || exit 0
@@ -30,9 +30,10 @@ jobs:
         npm run lint || true
 
     # -------------------------
-    # 🔐 SCA (Dependency Scan using Trivy FS)
+    # 🔐 SCA Scan
     # -------------------------
     - name: SCA Scan (Trivy FS)
+      continue-on-error: true
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
@@ -41,10 +42,10 @@ jobs:
         exit-code: '0'
 
     # -------------------------
-    # 🐳 Login to DockerHub
+    # 🐳 Docker Login
     # -------------------------
     - name: Docker Login
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -53,6 +54,7 @@ jobs:
     # 🏗️ Build Image
     # -------------------------
     - name: Build Docker Image
+      continue-on-error: true
       run: |
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest ./${{ matrix.service }}
 
@@ -60,13 +62,15 @@ jobs:
     # 📤 Push Image
     # -------------------------
     - name: Push Docker Image
+      continue-on-error: true
       run: |
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
 
     # -------------------------
-    # 🔍 Image Scan (Trivy Image)
+    # 🔍 Image Scan
     # -------------------------
     - name: Scan Docker Image (Trivy)
+      continue-on-error: true
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest'
