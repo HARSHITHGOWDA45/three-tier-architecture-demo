@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-false: false
       matrix:
         service: [cart, catalogue, dispatch, payment, shipping, user, web]
 
